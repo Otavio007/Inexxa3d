@@ -10,7 +10,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as api from "../src/api";
 import { CatalogProduct, money, whatsappUrl } from "../src/domain";
@@ -37,7 +36,7 @@ async function load() {
 }
 export default function Catalog() {
   const { data, loading, error, reload } = useResource(load);
-  const { cart, setCart, session } = useApp();
+  const { cart, setCart } = useApp();
   const { width } = useWindowDimensions();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todos");
@@ -155,12 +154,6 @@ export default function Catalog() {
           >
             <Brand />
             <View style={styles.row}>
-              <Button
-                label={session ? "Minha gestão" : "Área de gestão"}
-                tone="ghost"
-                icon="person-outline"
-                onPress={() => router.push(session ? "/dashboard" : "/login")}
-              />
               <Button
                 label={`Sacola (${cart.reduce((n, i) => n + i.quantity, 0)})`}
                 icon="bag-handle-outline"
