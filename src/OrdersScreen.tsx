@@ -85,6 +85,7 @@ function EditOrderIcon({
 export function OrdersScreen({ history = false }: { history?: boolean }) {
   const { data, loading, error, reload } = useResource(load);
   const [search, setSearch] = useState("");
+  const [cardsWidth, setCardsWidth] = useState(0);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editing, setEditing] = useState(false);
   const [estimateNow, setEstimateNow] = useState(() => new Date());
@@ -317,182 +318,201 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
             }
           />
         ) : (
-          list.map((o) => (
-            <Pressable
-              key={o.id}
-              accessibilityRole="button"
-              accessibilityLabel={`Ver encomenda ${o.number} de ${o.customer_name}`}
-              onPress={() => viewOrder(o)}
-              style={({ hovered, pressed }) => [
-                styles.card,
-                {
-                  borderColor: hovered ? colors.primary : colors.border,
-                  backgroundColor: pressed ? colors.bg : "white",
-                },
-              ]}
-            >
-              <View style={[styles.row, { justifyContent: "space-between" }]}>
-                <View
-                  style={{
-                    gap: 7,
-                    flexGrow: 1,
-                    flexShrink: 1,
-                    flexBasis: 260,
-                    minWidth: 0,
-                    maxWidth: "100%",
-                  }}
-                >
-                  <Txt small>
-                    ENCOMENDA #{String(o.number).padStart(4, "0")} ·{" "}
-                    {displayDate(o.created_at)}
-                  </Txt>
-                  <Txt bold>{o.customer_name}</Txt>
-                  <Txt small>
-                    {o.items.filter((i) => i.completed).length} de{" "}
-                    {o.items.length} itens feitos
-                  </Txt>
-                  <Txt small>
-                    {o.items
-                      .map((i) => `${i.quantity}× ${i.product_name}`)
-                      .join(" · ")}
-                  </Txt>
-                </View>
-                <View
-                  style={{
-                    gap: 6,
-                    flexShrink: 1,
-                    minWidth: 0,
-                    maxWidth: "100%",
-                  }}
-                >
-                  <Txt bold>{money(o.total_cents)}</Txt>
-                  <Txt small>Saldo: {money(o.total_cents - received(o))}</Txt>
-                </View>
-              </View>
-              <View style={[styles.row, { justifyContent: "space-between" }]}>
-                <View
-                  style={[
-                    styles.row,
-                    { flexGrow: 1, flexShrink: 1, flexBasis: 200, minWidth: 0 },
-                  ]}
-                >
-                  {o.urgent && <Badge label="Urgente" tone="red" />}
-                  {o.canceled_at && <Badge label="Cancelada" tone="red" />}
-                  {o.due_date && (
-                    <Badge
-                      label={`Entrega ${displayDate(o.due_date)}`}
-                      tone={
-                        o.due_date < todaySP() && o.stage !== "delivered"
-                          ? "red"
-                          : "amber"
-                      }
-                    />
-                  )}
-                  {received(o) >= o.total_cents && (
-                    <Badge label="Pago" tone="green" />
-                  )}
-                </View>
-                <View style={styles.row}>
-                  {!o.canceled_at && (
-                    <EditOrderIcon disabled={busy} onPress={() => edit(o)} />
-                  )}
-                </View>
-              </View>
-              {!o.canceled_at && (
-                <View
-                  style={{
-                    gap: 4,
-                    alignSelf: "flex-start",
-                    width: 220,
-                    maxWidth: "100%",
-                    minWidth: 0,
-                  }}
-                >
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Status da encomenda ${o.number}: ${stages[o.stage]}`}
-                    accessibilityState={{
-                      expanded: statusMenuId === o.id,
-                      disabled: busy,
-                    }}
-                    disabled={busy}
-                    onPress={(event) => {
-                      event.stopPropagation();
-                      setStatusMenuId(statusMenuId === o.id ? null : o.id);
-                    }}
+          <View
+            onLayout={(event) => setCardsWidth(event.nativeEvent.layout.width)}
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 16,
+              alignItems: "flex-start",
+              width: "100%",
+            }}
+          >
+            {list.map((o) => (
+              <Pressable
+                key={o.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Ver encomenda ${o.number} de ${o.customer_name}`}
+                onPress={() => viewOrder(o)}
+                style={({ hovered, pressed }) => [
+                  styles.card,
+                  {
+                    width: cardsWidth >= 640 ? (cardsWidth - 16) / 2 : "100%",
+                    padding: 18,
+                    gap: 12,
+                    borderColor: hovered ? colors.primary : colors.border,
+                    backgroundColor: pressed ? colors.bg : "white",
+                  },
+                ]}
+              >
+                <View style={[styles.row, { justifyContent: "space-between" }]}>
+                  <View
                     style={{
-                      minHeight: 44,
-                      paddingHorizontal: 12,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      borderRadius: 10,
-                      backgroundColor: colors.soft,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 16,
+                      gap: 7,
+                      flexGrow: 1,
+                      flexShrink: 1,
+                      flexBasis: 260,
+                      minWidth: 0,
+                      maxWidth: "100%",
                     }}
                   >
-                    <Txt small>Status: {stages[o.stage]}</Txt>
-                    <Ionicons
-                      name={
-                        statusMenuId === o.id ? "chevron-up" : "chevron-down"
-                      }
-                      size={16}
-                      color={colors.primary}
-                    />
-                  </Pressable>
-                  {statusMenuId === o.id && (
-                    <View
-                      accessibilityRole="menu"
+                    <Txt small>
+                      ENCOMENDA #{String(o.number).padStart(4, "0")} ·{" "}
+                      {displayDate(o.created_at)}
+                    </Txt>
+                    <Txt bold>{o.customer_name}</Txt>
+                    <Txt small>
+                      {o.items.filter((i) => i.completed).length} de{" "}
+                      {o.items.length} itens feitos
+                    </Txt>
+                    <Txt small>
+                      {o.items
+                        .map((i) => `${i.quantity}× ${i.product_name}`)
+                        .join(" · ")}
+                    </Txt>
+                  </View>
+                  <View
+                    style={{
+                      gap: 6,
+                      flexShrink: 1,
+                      minWidth: 0,
+                      maxWidth: "100%",
+                    }}
+                  >
+                    <Txt bold>{money(o.total_cents)}</Txt>
+                    <Txt small>Saldo: {money(o.total_cents - received(o))}</Txt>
+                  </View>
+                </View>
+                <View style={[styles.row, { justifyContent: "space-between" }]}>
+                  <View
+                    style={[
+                      styles.row,
+                      {
+                        flexGrow: 1,
+                        flexShrink: 1,
+                        flexBasis: 200,
+                        minWidth: 0,
+                      },
+                    ]}
+                  >
+                    {o.urgent && <Badge label="Urgente" tone="red" />}
+                    {o.canceled_at && <Badge label="Cancelada" tone="red" />}
+                    {o.due_date && (
+                      <Badge
+                        label={`Entrega ${displayDate(o.due_date)}`}
+                        tone={
+                          o.due_date < todaySP() && o.stage !== "delivered"
+                            ? "red"
+                            : "amber"
+                        }
+                      />
+                    )}
+                    {received(o) >= o.total_cents && (
+                      <Badge label="Pago" tone="green" />
+                    )}
+                  </View>
+                  <View style={styles.row}>
+                    {!o.canceled_at && (
+                      <EditOrderIcon disabled={busy} onPress={() => edit(o)} />
+                    )}
+                  </View>
+                </View>
+                {!o.canceled_at && (
+                  <View
+                    style={{
+                      gap: 4,
+                      alignSelf: "flex-start",
+                      width: 220,
+                      maxWidth: "100%",
+                      minWidth: 0,
+                    }}
+                  >
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Status da encomenda ${o.number}: ${stages[o.stage]}`}
+                      accessibilityState={{
+                        expanded: statusMenuId === o.id,
+                        disabled: busy,
+                      }}
+                      disabled={busy}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        setStatusMenuId(statusMenuId === o.id ? null : o.id);
+                      }}
                       style={{
+                        minHeight: 44,
+                        paddingHorizontal: 12,
                         borderWidth: 1,
                         borderColor: colors.border,
                         borderRadius: 10,
-                        overflow: "hidden",
+                        backgroundColor: colors.soft,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 16,
                       }}
                     >
-                      {(Object.keys(stages) as Stage[]).map((stage) => (
-                        <Pressable
-                          key={stage}
-                          accessibilityRole="menuitem"
-                          accessibilityLabel={stages[stage]}
-                          accessibilityState={{ selected: o.stage === stage }}
-                          disabled={busy}
-                          onPress={(event) => {
-                            event.stopPropagation();
-                            if (o.stage === stage) setStatusMenuId(null);
-                            else void cardStage(o, stage);
-                          }}
-                          style={({ hovered, pressed }) => ({
-                            minHeight: 44,
-                            paddingHorizontal: 12,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 12,
-                            backgroundColor:
-                              hovered || pressed || o.stage === stage
-                                ? colors.soft
-                                : "white",
-                          })}
-                        >
-                          <Txt>{stages[stage]}</Txt>
-                          {o.stage === stage && (
-                            <Ionicons
-                              name="checkmark"
-                              size={17}
-                              color={colors.primary}
-                            />
-                          )}
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              )}
-            </Pressable>
-          ))
+                      <Txt small>Status: {stages[o.stage]}</Txt>
+                      <Ionicons
+                        name={
+                          statusMenuId === o.id ? "chevron-up" : "chevron-down"
+                        }
+                        size={16}
+                        color={colors.primary}
+                      />
+                    </Pressable>
+                    {statusMenuId === o.id && (
+                      <View
+                        accessibilityRole="menu"
+                        style={{
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: 10,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {(Object.keys(stages) as Stage[]).map((stage) => (
+                          <Pressable
+                            key={stage}
+                            accessibilityRole="menuitem"
+                            accessibilityLabel={stages[stage]}
+                            accessibilityState={{ selected: o.stage === stage }}
+                            disabled={busy}
+                            onPress={(event) => {
+                              event.stopPropagation();
+                              if (o.stage === stage) setStatusMenuId(null);
+                              else void cardStage(o, stage);
+                            }}
+                            style={({ hovered, pressed }) => ({
+                              minHeight: 44,
+                              paddingHorizontal: 12,
+                              flexDirection: "row",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 12,
+                              backgroundColor:
+                                hovered || pressed || o.stage === stage
+                                  ? colors.soft
+                                  : "white",
+                            })}
+                          >
+                            <Txt>{stages[stage]}</Txt>
+                            {o.stage === stage && (
+                              <Ionicons
+                                name="checkmark"
+                                size={17}
+                                color={colors.primary}
+                              />
+                            )}
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </Pressable>
+            ))}
+          </View>
         )}
       </ScrollView>
       <Dialog
@@ -954,3 +974,4 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
     </>
   );
 }
+
