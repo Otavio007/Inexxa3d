@@ -22,6 +22,7 @@ export async function catalog(): Promise<CatalogProduct[]> {
     supabase
       .from("catalog")
       .select("*")
+      .order("demand_rank", { ascending: true })
       .order("name")
       .order("id")
       .range(from, to),

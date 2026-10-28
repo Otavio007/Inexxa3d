@@ -54,6 +54,7 @@ export type Product = {
 };
 export type Category = { id: string; name: string };
 export type CatalogProduct = {
+  demand_rank?: number;
   id: string;
   name: string;
   description: string;

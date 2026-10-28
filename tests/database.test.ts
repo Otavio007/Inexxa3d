@@ -31,6 +31,7 @@ test(
       await db.exec(await readFile(new URL("../supabase/migrations/202610270003_multiple_categories.sql", import.meta.url), "utf8"));
       await db.exec(await readFile(new URL("../supabase/migrations/202610280001_production_time.sql", import.meta.url), "utf8"));
       await db.exec(await readFile(new URL("../supabase/migrations/202610280002_edit_order.sql", import.meta.url), "utf8"));
+      await db.exec(await readFile(new URL("../supabase/migrations/202610280003_catalog_popularity.sql", import.meta.url), "utf8"));
       const admin = randomUUID(),
         stranger = randomUUID();
       await db.query("insert into auth.users(id) values($1),($2)", [
@@ -277,6 +278,25 @@ test(
       await db.exec("reset role; set role anon;");
       assert.equal((await db.query("select * from catalog")).rows.length, 0);
       await assert.rejects(db.query("select delete_product($1)", [pid]));
+      await db.exec(`reset role; set role authenticated; select set_config('request.jwt.claim.sub','${admin}',false);`);
+      await db.query("select save_product($1::jsonb)", [JSON.stringify({ ...imported, published: true })]);
+      const popularId = randomUUID(), popularVariant = randomUUID();
+      await db.query("select save_product($1::jsonb)", [JSON.stringify({ ...imported, id: popularId, name: "Produto popular", published: true, variants: [{ ...imported.variants[0], id: popularVariant }] })]);
+      const popularOrderId = randomUUID();
+      await db.query("select create_order($1::jsonb)", [JSON.stringify({ ...editDraft, id: popularOrderId, items: [{ variant_id: popularVariant, quantity: 5, price_cents: 1000, notes: "" }] })]);
+      const ranking = async () => (await db.query<{id:string; demand_rank:number}>("select id,demand_rank from catalog order by demand_rank,name,id")).rows;
+      assert.equal((await ranking())[0]!.id, popularId);
+      await db.query("select order_action($1,'cancel')", [popularOrderId]);
+      assert.equal((await ranking())[0]!.id, imported.id);
+      await db.query("select order_action($1,'reopen')", [popularOrderId]);
+      await db.query("select order_action($1,'stage','delivered')", [popularOrderId]);
+      assert.equal((await ranking())[0]!.id, popularId); // Entregues continuam contando.
+      await db.exec("reset role; set role anon;");
+      assert.equal((await ranking())[0]!.id, popularId);
+      const publicProduct = (await db.query<Record<string,unknown>>("select * from catalog limit 1")).rows[0]!;
+      assert.equal("units" in publicProduct, false);
+      assert.equal("customer_name" in publicProduct, false);
+      await assert.rejects(db.exec("select * from orders"));
     } finally {
       await db.close();
     }
