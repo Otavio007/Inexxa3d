@@ -33,6 +33,7 @@ test(
       await db.exec(await readFile(new URL("../supabase/migrations/202610280002_edit_order.sql", import.meta.url), "utf8"));
       await db.exec(await readFile(new URL("../supabase/migrations/202610280003_catalog_popularity.sql", import.meta.url), "utf8"));
       await db.exec(await readFile(new URL("../supabase/migrations/202610280004_item_completion.sql", import.meta.url), "utf8"));
+      await db.exec(await readFile(new URL("../supabase/migrations/202610280005_produced_quantity.sql", import.meta.url), "utf8"));
       const admin = randomUUID(),
         stranger = randomUUID();
       await db.query("insert into auth.users(id) values($1),($2)", [
@@ -307,6 +308,18 @@ test(
       assert.equal("units" in publicProduct, false);
       assert.equal("customer_name" in publicProduct, false);
       await assert.rejects(db.exec("select * from orders"));
+      await assert.rejects(db.query("select set_item_produced($1,1)", [randomUUID()]));
+      await db.exec(`reset role; set role authenticated; select set_config('request.jwt.claim.sub','${admin}',false);`);
+      const productionOrderId = randomUUID();
+      await db.query("select create_order($1::jsonb)", [JSON.stringify({ ...editDraft, id: productionOrderId, items: [{ variant_id: popularVariant, quantity: 5, price_cents: 1000, notes: "" }] })]);
+      const productionItem = (await db.query<{id:string}>("select id from order_items where order_id=$1", [productionOrderId])).rows[0]!.id;
+      await db.query("select set_item_produced($1,2)", [productionItem]);
+      assert.equal((await db.query<{stage:string}>("select stage from orders where id=$1", [productionOrderId])).rows[0]!.stage, "printing");
+      await assert.rejects(db.query("select set_item_produced($1,6)", [productionItem]));
+      await db.query("select set_item_produced($1,5)", [productionItem]);
+      assert.equal((await db.query<{stage:string}>("select stage from orders where id=$1", [productionOrderId])).rows[0]!.stage, "ready");
+      await db.query("select set_item_produced($1,1)", [productionItem]);
+      assert.equal((await db.query<{stage:string}>("select stage from orders where id=$1", [productionOrderId])).rows[0]!.stage, "printing");
     } finally {
       await db.close();
     }

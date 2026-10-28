@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Order, OrderItem } from "../src/domain";
-import { deliverySuggestion, totalProductionMinutes } from "../src/production";
+import {
+  deliverySuggestion,
+  totalProductionMinutes,
+  productionProgress,
+} from "../src/production";
 const item = (minutes: number, quantity = 1): OrderItem => ({
   variant_id: "v",
   product_name: "Peça",
@@ -42,6 +46,25 @@ test("tempo total no card soma quantidades e inclui itens já feitos", () => {
     null,
   );
   assert.equal(totalProductionMinutes([item(0)]), 0);
+});
+test("progresso conta unidades e desconta produção parcial do prazo", () => {
+  const partial = { ...item(60, 10), produced_quantity: 3 };
+  assert.deepEqual(productionProgress([partial]), {
+    total: 10,
+    done: 3,
+    percent: 30,
+  });
+  assert.equal(
+    productionProgress([{ ...partial, produced_quantity: 10 }]).percent,
+    100,
+  );
+  const result = deliverySuggestion(
+    [order("printing", [partial])],
+    [item(60)],
+    new Date("2026-10-28T08:00:00-03:00"),
+  );
+  assert.equal(result.queueMinutes, 420);
+  assert.equal(result.time, "16:00");
 });
 test("entrega: soma fila e quantidades, exclui prontos/entregues/cancelados", () => {
   const result = deliverySuggestion(

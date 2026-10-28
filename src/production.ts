@@ -12,7 +12,8 @@ export function deliverySuggestion(
   let missing = false;
   function duration(rows: OrderItem[]) {
     return rows.reduce((sum, item) => {
-      if (item.completed) return sum;
+      const remaining = item.quantity - producedQuantity(item);
+      if (!remaining) return sum;
       if (
         item.production_minutes == null ||
         !Number.isFinite(item.production_minutes) ||
@@ -23,7 +24,7 @@ export function deliverySuggestion(
         missing = true;
         return sum;
       }
-      return sum + item.production_minutes * item.quantity;
+      return sum + item.production_minutes * remaining;
     }, 0);
   }
   const queued = orders.filter(
@@ -78,6 +79,24 @@ export function deliverySuggestion(
 }
 export function productionDuration(minutes: number) {
   return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, "0")}`;
+}
+export function producedQuantity(item: OrderItem) {
+  return Math.max(
+    0,
+    Math.min(
+      item.quantity,
+      item.produced_quantity ?? (item.completed ? item.quantity : 0),
+    ),
+  );
+}
+export function productionProgress(items: OrderItem[]) {
+  const total = items.reduce((sum, item) => sum + item.quantity, 0);
+  const done = items.reduce((sum, item) => sum + producedQuantity(item), 0);
+  return {
+    total,
+    done,
+    percent: total > 0 ? Math.floor((done / total) * 100) : 0,
+  };
 }
 export function totalProductionMinutes(items: OrderItem[]): number | null {
   let total = 0;

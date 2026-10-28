@@ -7,6 +7,8 @@ import {
   deliverySuggestion,
   productionDuration,
   totalProductionMinutes,
+  producedQuantity,
+  productionProgress,
 } from "./production";
 import {
   Order,
@@ -56,6 +58,76 @@ type Draft = {
   discount_value: number;
   items: (OrderItem & { key: string })[];
 };
+function ProductionBar({ items }: { items: OrderItem[] }) {
+  const { total, done, percent } = productionProgress(items);
+  return (
+    <View style={{ gap: 6, width: "100%" }}>
+      <Txt small>
+        Produção: {done} de {total} unidades · {percent}%
+      </Txt>
+      <View
+        accessibilityRole="progressbar"
+        accessibilityLabel="Progresso de produção"
+        accessibilityValue={{
+          min: 0,
+          max: total,
+          now: done,
+          text: `${percent}%`,
+        }}
+        style={{
+          height: 8,
+          borderRadius: 8,
+          backgroundColor: colors.border,
+          overflow: "hidden",
+        }}
+      >
+        <View
+          style={{
+            width: `${percent}%`,
+            height: "100%",
+            backgroundColor: colors.primary,
+            borderRadius: 8,
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+function ProducedControl({
+  item,
+  busy,
+  onSave,
+}: {
+  item: OrderItem;
+  busy: boolean;
+  onSave: (quantity: number) => void;
+}) {
+  const current = producedQuantity(item);
+  const [quantity, setQuantity] = useState(current);
+  useEffect(() => setQuantity(current), [current, item.id]);
+  const valid =
+    Number.isInteger(quantity) && quantity >= 0 && quantity <= item.quantity;
+  return (
+    <View style={{ gap: 8 }}>
+      <NumberField
+        label={`Unidades produzidas (de ${item.quantity})`}
+        integer
+        value={quantity}
+        onChange={setQuantity}
+      />
+      {!valid && (
+        <Notice error message={`Informe de 0 a ${item.quantity} unidades.`} />
+      )}
+      <Button
+        label="Salvar produção"
+        tone="secondary"
+        icon="checkmark"
+        disabled={busy || !valid || quantity === current}
+        onPress={() => onSave(quantity)}
+      />
+    </View>
+  );
+}
 function OrderProductionTime({ items }: { items: OrderItem[] }) {
   const minutes = totalProductionMinutes(items);
   return (
@@ -158,12 +230,12 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
       setBusy(false);
     }
   }
-  async function completeItem(item: OrderItem) {
+  async function completeItem(item: OrderItem, quantity: number) {
     if (!item.id || busy) return;
     setBusy(true);
     setProblem("");
     try {
-      await api.setItemCompleted(item.id, !item.completed);
+      await api.setItemProduced(item.id, quantity);
       await reload();
     } catch (e) {
       setProblem(errorText(e));
@@ -380,10 +452,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                     </Txt>
                     <Txt bold>{o.customer_name}</Txt>
                     <OrderProductionTime items={o.items} />
-                    <Txt small>
-                      {o.items.filter((i) => i.completed).length} de{" "}
-                      {o.items.length} itens feitos
-                    </Txt>
+                    <ProductionBar items={o.items} />
                     <Txt small>
                       {o.items
                         .map((i) => `${i.quantity}× ${i.product_name}`)
@@ -787,34 +856,19 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                 }
               />
             </View>
+            <ProductionBar items={selected.items} />
             {selected.items.map((i) => (
               <Card key={i.id}>
                 {selected.canceled_at ? (
-                  <Badge
-                    label={i.completed ? "Feito" : "Não feito"}
-                    tone={i.completed ? "green" : "amber"}
-                  />
+                  <Txt small>
+                    {producedQuantity(i)} de {i.quantity} unidades produzidas
+                  </Txt>
                 ) : (
-                  <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityLabel={`Feito: ${i.product_name} — ${i.size}, ${i.quantity} unidade(s)`}
-                    accessibilityState={{
-                      checked: !!i.completed,
-                      disabled: busy,
-                    }}
-                    disabled={busy}
-                    onPress={() => void completeItem(i)}
-                    style={[styles.row, { minHeight: 44 }]}
-                  >
-                    <Ionicons
-                      name={i.completed ? "checkbox" : "square-outline"}
-                      size={24}
-                      color={i.completed ? colors.primary : colors.muted}
-                    />
-                    <Txt bold>
-                      {i.completed ? "Feito" : "Marcar como feito"}
-                    </Txt>
-                  </Pressable>
+                  <ProducedControl
+                    item={i}
+                    busy={busy}
+                    onSave={(quantity) => void completeItem(i, quantity)}
+                  />
                 )}
                 <Txt bold>
                   {i.quantity}× {i.product_name} — {i.size}
@@ -827,11 +881,6 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                 <Txt small>
                   Custo registrado: {money(i.cost_cents * i.quantity)}
                 </Txt>
-                {i.quantity > 1 && (
-                  <Txt small>
-                    A marcação vale para as {i.quantity} unidades deste item.
-                  </Txt>
-                )}
               </Card>
             ))}
             <Card>

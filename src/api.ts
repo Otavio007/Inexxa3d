@@ -96,6 +96,14 @@ export async function setItemCompleted(itemId: string, completed: boolean) {
     }),
   );
 }
+export async function setItemProduced(itemId: string, quantity: number) {
+  return check(
+    await supabase.rpc("set_item_produced", {
+      p_item_id: itemId,
+      p_quantity: quantity,
+    }),
+  );
+}
 export async function orderAction(id: string, action: string, stage?: string) {
   return check(
     await supabase.rpc("order_action", {
