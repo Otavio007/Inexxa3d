@@ -42,26 +42,82 @@ test("entrega: soma fila e quantidades, exclui prontos/entregues/cancelados", ()
       order("todo", [item(9999)], true),
     ],
     [item(390, 2)],
-    "2026-10-28",
+    new Date("2026-10-28T08:00:00-03:00"),
   );
   assert.equal(result.queueMinutes, 780);
   assert.equal(result.newMinutes, 780);
   assert.equal(result.days, 2);
   assert.equal(result.date, "2026-10-29");
 });
-test("entrega: limite de 13h, dias corridos e virada de mês", () => {
+test("entrega: janela de 14h, dias corridos e virada de mês", () => {
   assert.equal(
-    deliverySuggestion([], [item(780)], "2026-10-31").date,
+    deliverySuggestion([], [item(840)], new Date("2026-10-31T08:00:00-03:00"))
+      .date,
     "2026-10-31",
   );
   assert.equal(
-    deliverySuggestion([], [item(781)], "2026-10-31").date,
+    deliverySuggestion([], [item(841)], new Date("2026-10-31T08:00:00-03:00"))
+      .date,
     "2026-11-01",
   );
   assert.equal(
-    deliverySuggestion([], [item(1561)], "2026-12-31").date,
+    deliverySuggestion([], [item(1681)], new Date("2026-12-31T08:00:00-03:00"))
+      .date,
     "2027-01-02",
   );
+});
+test("entrega: considera hora da venda, início às 8h e pausa às 22h", () => {
+  const before = deliverySuggestion(
+    [],
+    [item(60)],
+    new Date("2026-10-28T06:30:00-03:00"),
+  );
+  assert.equal(before.date, "2026-10-28");
+  assert.equal(before.time, "09:00");
+  const exact = deliverySuggestion(
+    [],
+    [item(120)],
+    new Date("2026-10-28T20:00:00-03:00"),
+  );
+  assert.equal(exact.date, "2026-10-28");
+  assert.equal(exact.time, "22:00");
+  const next = deliverySuggestion(
+    [],
+    [item(180)],
+    new Date("2026-10-28T20:00:00-03:00"),
+  );
+  assert.equal(next.date, "2026-10-29");
+  assert.equal(next.time, "09:00");
+  const closed = deliverySuggestion(
+    [],
+    [item(60)],
+    new Date("2026-10-28T22:00:00-03:00"),
+  );
+  assert.equal(closed.date, "2026-10-29");
+  assert.equal(closed.time, "09:00");
+  const late = deliverySuggestion(
+    [],
+    [item(60)],
+    new Date("2026-10-29T02:30:00Z"),
+  );
+  assert.equal(late.date, "2026-10-29");
+  assert.equal(late.time, "09:00"); // Ainda é 23h30 do dia 28 em São Paulo.
+});
+test("entrega: fila consome as horas de hoje e segundos não antecipam término", () => {
+  const result = deliverySuggestion(
+    [order("todo", [item(90)])],
+    [item(60)],
+    new Date("2026-10-28T20:00:00-03:00"),
+  );
+  assert.equal(result.date, "2026-10-29");
+  assert.equal(result.time, "08:30");
+  const seconds = deliverySuggestion(
+    [],
+    [item(1)],
+    new Date("2026-10-28T21:59:30-03:00"),
+  );
+  assert.equal(seconds.date, "2026-10-29");
+  assert.equal(seconds.time, "08:01");
 });
 test("entrega: sem itens, sem tempo ou fila incompleta não inventa uma data", () => {
   assert.equal(deliverySuggestion([], []).date, null);

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import * as api from "./api";
 import { DateField } from "./DateField";
@@ -56,6 +56,14 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editing, setEditing] = useState(false);
+  const [estimateNow, setEstimateNow] = useState(() => new Date());
+  const formOpen = !!draft;
+  useEffect(() => {
+    if (!formOpen) return;
+    setEstimateNow(new Date());
+    const timer = setInterval(() => setEstimateNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, [formOpen]);
   const [cardProblem, setCardProblem] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,6 +80,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
   const delivery = deliverySuggestion(
     (data?.orders ?? []).filter((o) => !editing || o.id !== draft?.id),
     draft?.items ?? [],
+    estimateNow,
   );
   function edit(order: Order) {
     setEditing(true);
@@ -374,7 +383,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               onChange={(due_date) => update({ due_date })}
             />
             <Card>
-              <Txt bold>Sugestão de entrega · 13h de impressão por dia</Txt>
+              <Txt bold>Sugestão de entrega · Impressão das 8h às 22h</Txt>
               <Txt small>
                 Fila: {delivery.queuedOrders} pedido(s) ·{" "}
                 {productionDuration(delivery.queueMinutes)}. Novo pedido:{" "}
@@ -382,7 +391,10 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               </Txt>
               {delivery.date ? (
                 <>
-                  <Txt bold>Entrega sugerida: {displayDate(delivery.date)}</Txt>
+                  <Txt bold>
+                    Entrega sugerida: {displayDate(delivery.date)} às{" "}
+                    {delivery.time}
+                  </Txt>
                   <Button
                     label="Usar data sugerida"
                     icon="calendar-outline"
@@ -400,11 +412,14 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                 </Txt>
               )}
               <Txt small>
-                Uma impressora, todos os dias, contando 13h disponíveis hoje.
-                Pedidos a fazer e em produção entram com o tempo completo;
-                prontos, entregues e cancelados não entram. A estimativa não
-                desconta horas já impressas e não inclui acabamento ou
-                transporte. Você pode escolher outra data.
+                Uma impressora, todos os dias, das 8h às 22h (horário de São
+                Paulo). Hoje restam{" "}
+                {productionDuration(delivery.availableToday)} disponíveis. O
+                cálculo parte do horário atual e continua às 8h do dia seguinte
+                quando necessário. Pedidos a fazer e em produção entram com o
+                tempo completo; prontos, entregues e cancelados não entram. A
+                estimativa não desconta horas já impressas e não inclui
+                acabamento ou transporte. Você pode escolher outra data.
               </Txt>
               {delivery.date &&
                 validDate(inputDate(draft.due_date)) &&
