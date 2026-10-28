@@ -29,6 +29,7 @@ test(
       assert.match(settingsMigration, /set cost_cents=variant_cost\(grams,minutes,extras_cents\) where id is not null;/);
       await db.exec(settingsMigration);
       await db.exec(await readFile(new URL("../supabase/migrations/202610270003_multiple_categories.sql", import.meta.url), "utf8"));
+      await db.exec(await readFile(new URL("../supabase/migrations/202610280001_production_time.sql", import.meta.url), "utf8"));
       const admin = randomUUID(),
         stranger = randomUUID();
       await db.query("insert into auth.users(id) values($1),($2)", [
@@ -134,6 +135,7 @@ test(
       ).rows[0]!;
       assert.equal(snapshot.cost_cents, 1368);
       assert.equal(snapshot.price_cents, 2790);
+      assert.equal((await db.query<{production_minutes:number}>("select production_minutes from order_items")).rows[0]!.production_minutes, 60);
       const payid = randomUUID();
       await db.query("select record_payment($1,$2,1000,current_date,$3)", [
         oid,

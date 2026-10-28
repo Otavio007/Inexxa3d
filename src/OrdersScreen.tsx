@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import * as api from "./api";
 import { DateField } from "./DateField";
+import { deliverySuggestion, productionDuration } from "./production";
 import {
   Order,
   OrderItem,
@@ -66,6 +67,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
   const [paymentId, setPaymentId] = useState(api.uuid());
   const [pickerSearch, setPickerSearch] = useState("");
   const selected = data?.orders.find((o) => o.id === selectedId);
+  const delivery = deliverySuggestion(data?.orders ?? [], draft?.items ?? []);
   const list = sortOrders(
     (data?.orders ?? []).filter(
       (o) =>
@@ -316,6 +318,45 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               value={draft.due_date}
               onChange={(due_date) => update({ due_date })}
             />
+            <Card>
+              <Txt bold>Sugestão de entrega · 13h de impressão por dia</Txt>
+              <Txt small>
+                Fila: {delivery.queuedOrders} pedido(s) ·{" "}
+                {productionDuration(delivery.queueMinutes)}. Novo pedido:{" "}
+                {productionDuration(delivery.newMinutes)}.
+              </Txt>
+              {delivery.date ? (
+                <>
+                  <Txt bold>Entrega sugerida: {displayDate(delivery.date)}</Txt>
+                  <Button
+                    label="Usar data sugerida"
+                    icon="calendar-outline"
+                    tone="secondary"
+                    onPress={() =>
+                      update({ due_date: displayDate(delivery.date!) })
+                    }
+                  />
+                </>
+              ) : (
+                <Txt small>
+                  {delivery.missing
+                    ? "Há pedidos sem tempo de produção registrado. Execute o SQL de atualização para calcular a fila completa."
+                    : "Adicione itens com tempo de produção cadastrado para calcular a sugestão."}
+                </Txt>
+              )}
+              <Txt small>
+                Uma impressora, todos os dias, contando 13h disponíveis hoje.
+                Pedidos a fazer e em produção entram com o tempo completo;
+                prontos, entregues e cancelados não entram. A estimativa não
+                desconta horas já impressas e não inclui acabamento ou
+                transporte. Você pode escolher outra data.
+              </Txt>
+              {delivery.date &&
+                validDate(inputDate(draft.due_date)) &&
+                inputDate(draft.due_date) < delivery.date && (
+                  <Notice message="A data escolhida está antes da estimativa de produção da fila." />
+                )}
+            </Card>
             <Heading
               title="Itens da encomenda"
               subtitle="Selecione produtos e personalize os valores, se necessário."
@@ -359,6 +400,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                                   size: v.size,
                                   price_cents: v.price_cents,
                                   cost_cents: v.cost_cents,
+                                  production_minutes: v.minutes,
                                   quantity: 1,
                                   notes: "",
                                 },

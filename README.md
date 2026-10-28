@@ -45,6 +45,8 @@ Os arquivos de imagem têm URLs públicas, mesmo quando o produto ainda não foi
 
 ## Como usar
 
+Para habilitar sugestões de entrega, execute `supabase/migrations/202610280001_production_time.sql` no SQL Editor. O tempo por unidade fica registrado em cada item da encomenda pelo servidor. Encomendas antigas recebem o tempo atualmente cadastrado na variação, pois não havia registro histórico desse tempo. A sugestão considera uma impressora, 13h por dia corrido desde hoje, a fila a fazer/em produção e as quantidades do novo pedido. Não desconta progresso parcial nem considera acabamento ou transporte; use o botão para aplicar a data e ajuste quando necessário. Alterar o tempo de um produto não muda o tempo registrado em encomendas existentes.
+
 - **Produtos:** crie o produto, inclua tamanhos e salve para liberar fotos e arquivos. Para um produto sem variações, use a opção “Padrão”. A primeira foto disponível é a capa. Configure categoria e publique para aparecer no catálogo.
 - **Custos e preços:** valores de embalagem e desgaste são por unidade. Energia usa a duração em minutos convertida em horas. O custo é arredondado uma vez para centavos; depois o acréscimo é aplicado e o preço sobe para o próximo valor terminado em ,90. Uma base de R$ 20,90 permanece R$ 20,90; R$ 20,91 vira R$ 21,90. Alterar o preço manualmente desativa o automático apenas naquele tamanho.
 - **Encomendas:** crie com itens, quantidades, personalizações e desconto geral em R$ ou %. As informações e os custos dos itens ficam congelados na criação. Registre pagamentos e mova a produção entre etapas. Somente pedidos entregues e totalmente pagos vão automaticamente ao histórico. Os cancelados também ficam no histórico, com alerta para acerto quando houver recebimentos.
