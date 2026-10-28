@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as api from "./api";
 import { DateField } from "./DateField";
 import { deliverySuggestion, productionDuration } from "./production";
@@ -51,6 +52,36 @@ type Draft = {
   discount_value: number;
   items: (OrderItem & { key: string })[];
 };
+function EditOrderIcon({
+  onPress,
+  disabled,
+}: {
+  onPress: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Editar encomenda"
+      disabled={disabled}
+      onPress={(event) => {
+        event.stopPropagation();
+        onPress();
+      }}
+      style={({ hovered, pressed }) => ({
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        justifyContent: "center",
+        alignItems: "center",
+        opacity: disabled ? 0.4 : 1,
+        backgroundColor: hovered || pressed ? colors.soft : "transparent",
+      })}
+    >
+      <Ionicons name="create-outline" size={20} color={colors.primary} />
+    </Pressable>
+  );
+}
 export function OrdersScreen({ history = false }: { history?: boolean }) {
   const { data, loading, error, reload } = useResource(load);
   const [search, setSearch] = useState("");
@@ -65,6 +96,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
     return () => clearInterval(timer);
   }, [formOpen]);
   const [cardProblem, setCardProblem] = useState("");
+  const [statusMenuId, setStatusMenuId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -83,6 +115,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
     estimateNow,
   );
   function edit(order: Order) {
+    setStatusMenuId(null);
     setEditing(true);
     setSelectedId(null);
     setProblem("");
@@ -93,6 +126,8 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
     });
   }
   async function cardStage(order: Order, stage: Stage) {
+    if (busy) return;
+    setStatusMenuId(null);
     setBusy(true);
     setCardProblem("");
     try {
@@ -103,6 +138,15 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
     } finally {
       setBusy(false);
     }
+  }
+  function viewOrder(order: Order) {
+    setStatusMenuId(null);
+    setSelectedId(order.id);
+    setProblem("");
+    setAmount(order.total_cents - received(order));
+    setPaymentDate(displayDate(todaySP()));
+    setPaymentNotes("");
+    setPaymentId(api.uuid());
   }
   const list = sortOrders(
     (data?.orders ?? []).filter(
@@ -261,7 +305,19 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
           />
         ) : (
           list.map((o) => (
-            <Card key={o.id}>
+            <Pressable
+              key={o.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Ver encomenda ${o.number} de ${o.customer_name}`}
+              onPress={() => viewOrder(o)}
+              style={({ hovered, pressed }) => [
+                styles.card,
+                {
+                  borderColor: hovered ? colors.primary : colors.border,
+                  backgroundColor: pressed ? colors.bg : "white",
+                },
+              ]}
+            >
               <View style={[styles.row, { justifyContent: "space-between" }]}>
                 <View style={{ gap: 7 }}>
                   <Txt small>
@@ -283,16 +339,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               <View style={[styles.row, { justifyContent: "space-between" }]}>
                 <View style={styles.row}>
                   {o.urgent && <Badge label="Urgente" tone="red" />}
-                  <Badge
-                    label={o.canceled_at ? "Cancelada" : stages[o.stage]}
-                    tone={
-                      o.canceled_at
-                        ? "red"
-                        : o.stage === "delivered"
-                          ? "green"
-                          : "brand"
-                    }
-                  />
+                  {o.canceled_at && <Badge label="Cancelada" tone="red" />}
                   {o.due_date && (
                     <Badge
                       label={`Entrega ${displayDate(o.due_date)}`}
@@ -309,43 +356,98 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                 </View>
                 <View style={styles.row}>
                   {!o.canceled_at && (
-                    <Button
-                      label="Editar encomenda"
-                      icon="create-outline"
-                      tone="ghost"
-                      disabled={busy}
-                      onPress={() => edit(o)}
-                    />
+                    <EditOrderIcon disabled={busy} onPress={() => edit(o)} />
                   )}
-                  <Button
-                    label="Ver encomenda"
-                    tone="secondary"
-                    onPress={() => {
-                      setSelectedId(o.id);
-                      setProblem("");
-                      setAmount(o.total_cents - received(o));
-                      setPaymentDate(displayDate(todaySP()));
-                      setPaymentNotes("");
-                      setPaymentId(api.uuid());
-                    }}
-                  />
                 </View>
               </View>
               {!o.canceled_at && (
-                <View style={styles.row}>
-                  <Txt small>Status:</Txt>
-                  {(Object.keys(stages) as Stage[]).map((stage) => (
-                    <Button
-                      key={stage}
-                      label={stages[stage]}
-                      tone={o.stage === stage ? "primary" : "ghost"}
-                      disabled={busy || o.stage === stage}
-                      onPress={() => void cardStage(o, stage)}
+                <View
+                  style={{ gap: 4, alignSelf: "flex-start", minWidth: 200 }}
+                >
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Status da encomenda ${o.number}: ${stages[o.stage]}`}
+                    accessibilityState={{
+                      expanded: statusMenuId === o.id,
+                      disabled: busy,
+                    }}
+                    disabled={busy}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      setStatusMenuId(statusMenuId === o.id ? null : o.id);
+                    }}
+                    style={{
+                      minHeight: 44,
+                      paddingHorizontal: 12,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 10,
+                      backgroundColor: colors.soft,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 16,
+                    }}
+                  >
+                    <Txt small>Status: {stages[o.stage]}</Txt>
+                    <Ionicons
+                      name={
+                        statusMenuId === o.id ? "chevron-up" : "chevron-down"
+                      }
+                      size={16}
+                      color={colors.primary}
                     />
-                  ))}
+                  </Pressable>
+                  {statusMenuId === o.id && (
+                    <View
+                      accessibilityRole="menu"
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 10,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {(Object.keys(stages) as Stage[]).map((stage) => (
+                        <Pressable
+                          key={stage}
+                          accessibilityRole="menuitem"
+                          accessibilityLabel={stages[stage]}
+                          accessibilityState={{ selected: o.stage === stage }}
+                          disabled={busy}
+                          onPress={(event) => {
+                            event.stopPropagation();
+                            if (o.stage === stage) setStatusMenuId(null);
+                            else void cardStage(o, stage);
+                          }}
+                          style={({ hovered, pressed }) => ({
+                            minHeight: 44,
+                            paddingHorizontal: 12,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 12,
+                            backgroundColor:
+                              hovered || pressed || o.stage === stage
+                                ? colors.soft
+                                : "white",
+                          })}
+                        >
+                          <Txt>{stages[stage]}</Txt>
+                          {o.stage === stage && (
+                            <Ionicons
+                              name="checkmark"
+                              size={17}
+                              color={colors.primary}
+                            />
+                          )}
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
                 </View>
               )}
-            </Card>
+            </Pressable>
           ))
         )}
       </ScrollView>
@@ -591,13 +693,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               subtitle={`${selected.phone} · Entrega: ${displayDate(selected.due_date)}`}
             />
             {!selected.canceled_at && (
-              <Button
-                label="Editar encomenda"
-                icon="create-outline"
-                tone="secondary"
-                disabled={busy}
-                onPress={() => edit(selected)}
-              />
+              <EditOrderIcon disabled={busy} onPress={() => edit(selected)} />
             )}
             <View style={styles.row}>
               {selected.urgent && <Badge label="Urgente" tone="red" />}
