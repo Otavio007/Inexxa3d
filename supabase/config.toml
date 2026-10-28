@@ -1,0 +1,18 @@
+project_id = "innexa-3d"
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 10000
+[db]
+port = 54322
+major_version = 17
+[auth]
+enabled = true
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["http://localhost:8081/reset-password", "innexa3d://reset-password"]
+enable_signup = false
+[auth.email]
+enable_signup = false
+enable_confirmations = true
