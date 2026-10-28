@@ -319,7 +319,16 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               ]}
             >
               <View style={[styles.row, { justifyContent: "space-between" }]}>
-                <View style={{ gap: 7 }}>
+                <View
+                  style={{
+                    gap: 7,
+                    flexGrow: 1,
+                    flexShrink: 1,
+                    flexBasis: 260,
+                    minWidth: 0,
+                    maxWidth: "100%",
+                  }}
+                >
                   <Txt small>
                     ENCOMENDA #{String(o.number).padStart(4, "0")} ·{" "}
                     {displayDate(o.created_at)}
@@ -331,13 +340,25 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                       .join(" · ")}
                   </Txt>
                 </View>
-                <View style={{ gap: 6 }}>
+                <View
+                  style={{
+                    gap: 6,
+                    flexShrink: 1,
+                    minWidth: 0,
+                    maxWidth: "100%",
+                  }}
+                >
                   <Txt bold>{money(o.total_cents)}</Txt>
                   <Txt small>Saldo: {money(o.total_cents - received(o))}</Txt>
                 </View>
               </View>
               <View style={[styles.row, { justifyContent: "space-between" }]}>
-                <View style={styles.row}>
+                <View
+                  style={[
+                    styles.row,
+                    { flexGrow: 1, flexShrink: 1, flexBasis: 200, minWidth: 0 },
+                  ]}
+                >
                   {o.urgent && <Badge label="Urgente" tone="red" />}
                   {o.canceled_at && <Badge label="Cancelada" tone="red" />}
                   {o.due_date && (
@@ -362,7 +383,13 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               </View>
               {!o.canceled_at && (
                 <View
-                  style={{ gap: 4, alignSelf: "flex-start", minWidth: 200 }}
+                  style={{
+                    gap: 4,
+                    alignSelf: "flex-start",
+                    width: 220,
+                    maxWidth: "100%",
+                    minWidth: 0,
+                  }}
                 >
                   <Pressable
                     accessibilityRole="button"

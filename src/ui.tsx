@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,6 +41,8 @@ export const styles = StyleSheet.create({
   },
   subtitle: { color: colors.muted, fontSize: 15, lineHeight: 23 },
   card: {
+    minWidth: 0,
+    maxWidth: "100%",
     backgroundColor: "white",
     borderRadius: 20,
     borderWidth: 1,
@@ -48,6 +51,8 @@ export const styles = StyleSheet.create({
     gap: 16,
   },
   row: {
+    minWidth: 0,
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
@@ -84,6 +89,14 @@ export function Txt({
     <Text
       style={[
         small ? styles.small : styles.body,
+        {
+          minWidth: 0,
+          maxWidth: "100%",
+          flexShrink: 1,
+          ...(Platform.OS === "web"
+            ? { overflowWrap: "anywhere" as const }
+            : {}),
+        },
         muted && { color: colors.muted },
         bold && { fontWeight: "700" },
       ]}
@@ -108,7 +121,16 @@ export function Heading({
         { justifyContent: "space-between", alignItems: "flex-start" },
       ]}
     >
-      <View style={{ flex: 1, minWidth: 200, gap: 8 }}>
+      <View
+        style={{
+          flexGrow: 1,
+          flexShrink: 1,
+          flexBasis: 200,
+          minWidth: 0,
+          maxWidth: "100%",
+          gap: 8,
+        }}
+      >
         <Text style={styles.title}>{title}</Text>
         {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
@@ -164,6 +186,8 @@ export function Button({
         justifyContent: "center",
         gap: 8,
         minHeight: 46,
+        maxWidth: "100%",
+        flexShrink: 1,
         opacity: disabled || loading ? 0.45 : pressed ? 0.75 : 1,
       })}
     >
@@ -172,7 +196,15 @@ export function Button({
       ) : (
         icon && <Ionicons name={icon} size={18} color={fg} />
       )}
-      <Text style={{ fontSize: 14, fontWeight: "700", color: fg }}>
+      <Text
+        style={{
+          fontSize: 14,
+          fontWeight: "700",
+          color: fg,
+          flexShrink: 1,
+          minWidth: 0,
+        }}
+      >
         {label}
       </Text>
     </Pressable>
@@ -479,7 +511,9 @@ export function Grid({
               style={{
                 flexGrow: 1,
                 flexBasis: min,
-                minWidth: Math.min(min, 240),
+                minWidth: 0,
+                maxWidth: "100%",
+                flexShrink: 1,
               }}
             >
               {child}
