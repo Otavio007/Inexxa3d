@@ -217,8 +217,15 @@ export function priority(
   return o.urgent ? 0 : o.due_date && o.due_date <= addDays(today, 2) ? 1 : 2;
 }
 export function sortOrders(orders: Order[], today = todaySP()) {
+  const stageOrder: Record<Stage, number> = {
+    ready: 0,
+    printing: 1,
+    todo: 2,
+    delivered: 3,
+  };
   return [...orders].sort(
     (a, b) =>
+      stageOrder[a.stage] - stageOrder[b.stage] ||
       priority(a, today) - priority(b, today) ||
       a.created_at.localeCompare(b.created_at) ||
       a.number - b.number,

@@ -91,6 +91,20 @@ test("fila prioriza urgentes, depois vencidas e até dois dias, mantendo criaç�
     ["urgente", "prazo", "normal"],
   );
 });
+test("fila ordena pronto, em produção, a fazer e entregue antes da urgência", () => {
+  const input = [
+    order({ id: "fazer", stage: "todo", urgent: true }),
+    order({ id: "entregue", stage: "delivered" }),
+    order({ id: "produzindo", stage: "printing" }),
+    order({ id: "pronto", stage: "ready" }),
+    order({ id: "pronto-urgente", stage: "ready", urgent: true }),
+  ];
+  assert.deepEqual(
+    sortOrders(input, "2026-10-28").map((o) => o.id),
+    ["pronto-urgente", "pronto", "produzindo", "fazer", "entregue"],
+  );
+  assert.equal(input[0]!.id, "fazer");
+});
 test("somente entregue e integralmente pago é arquivado, ou cancelado", () => {
   const payments = [
     { id: "1", amount_cents: 1000, paid_on: "2026-10-24", notes: "" },

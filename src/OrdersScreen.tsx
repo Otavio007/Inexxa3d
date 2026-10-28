@@ -432,7 +432,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
           subtitle={
             history
               ? "Pedidos entregues e pagos, além dos cancelados."
-              : "Urgentes primeiro. Prazos próximos em destaque. Nenhum detalhe esquecido."
+              : "Prontos primeiro, depois em produção e a fazer. Urgência e prazo têm prioridade dentro de cada etapa."
           }
           action={
             !history && (
