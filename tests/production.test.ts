@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Order, OrderItem } from "../src/domain";
-import { deliverySuggestion } from "../src/production";
+import { deliverySuggestion, totalProductionMinutes } from "../src/production";
 const item = (minutes: number, quantity = 1): OrderItem => ({
   variant_id: "v",
   product_name: "Peça",
@@ -31,6 +31,17 @@ const order = (
   discount_value: 0,
   items,
   payments: [],
+});
+test("tempo total no card soma quantidades e inclui itens já feitos", () => {
+  assert.equal(
+    totalProductionMinutes([item(90, 2), { ...item(45, 3), completed: true }]),
+    315,
+  );
+  assert.equal(
+    totalProductionMinutes([{ ...item(60), production_minutes: undefined }]),
+    null,
+  );
+  assert.equal(totalProductionMinutes([item(0)]), 0);
 });
 test("entrega: soma fila e quantidades, exclui prontos/entregues/cancelados", () => {
   const result = deliverySuggestion(

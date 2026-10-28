@@ -79,3 +79,18 @@ export function deliverySuggestion(
 export function productionDuration(minutes: number) {
   return `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, "0")}`;
 }
+export function totalProductionMinutes(items: OrderItem[]): number | null {
+  let total = 0;
+  for (const item of items) {
+    if (
+      item.production_minutes == null ||
+      !Number.isInteger(item.production_minutes) ||
+      item.production_minutes < 0 ||
+      !Number.isInteger(item.quantity) ||
+      item.quantity < 1
+    )
+      return null;
+    total += item.production_minutes * item.quantity;
+  }
+  return total;
+}

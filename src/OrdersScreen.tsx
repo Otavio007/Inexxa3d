@@ -3,7 +3,11 @@ import { Pressable, ScrollView, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as api from "./api";
 import { DateField } from "./DateField";
-import { deliverySuggestion, productionDuration } from "./production";
+import {
+  deliverySuggestion,
+  productionDuration,
+  totalProductionMinutes,
+} from "./production";
 import {
   Order,
   OrderItem,
@@ -52,6 +56,20 @@ type Draft = {
   discount_value: number;
   items: (OrderItem & { key: string })[];
 };
+function OrderProductionTime({ items }: { items: OrderItem[] }) {
+  const minutes = totalProductionMinutes(items);
+  return (
+    <View style={[styles.row, { gap: 6 }]}>
+      <Ionicons name="time-outline" size={16} color={colors.primary} />
+      <Txt small>
+        Produção total:{" "}
+        {minutes === null
+          ? "tempo não cadastrado"
+          : productionDuration(minutes)}
+      </Txt>
+    </View>
+  );
+}
 function EditOrderIcon({
   onPress,
   disabled,
@@ -361,6 +379,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                       {displayDate(o.created_at)}
                     </Txt>
                     <Txt bold>{o.customer_name}</Txt>
+                    <OrderProductionTime items={o.items} />
                     <Txt small>
                       {o.items.filter((i) => i.completed).length} de{" "}
                       {o.items.length} itens feitos
@@ -974,4 +993,3 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
     </>
   );
 }
-
