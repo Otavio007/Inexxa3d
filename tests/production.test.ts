@@ -127,3 +127,13 @@ test("entrega: sem itens, sem tempo ou fila incompleta não inventa uma data", (
   assert.equal(result.missing, true);
   assert.equal(result.date, null);
 });
+test("entrega: itens já feitos não ocupam a fila de impressão", () => {
+  const result = deliverySuggestion(
+    [order("printing", [{ ...item(1000), completed: true }, item(60)])],
+    [item(60)],
+    new Date("2026-10-28T20:00:00-03:00"),
+  );
+  assert.equal(result.queueMinutes, 60);
+  assert.equal(result.date, "2026-10-28");
+  assert.equal(result.time, "22:00");
+});

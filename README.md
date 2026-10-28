@@ -45,6 +45,8 @@ Os arquivos de imagem têm URLs públicas, mesmo quando o produto ainda não foi
 
 ## Como usar
 
+Para marcar itens produzidos, execute `supabase/migrations/202610280004_item_completion.sql` após as anteriores. Nos detalhes da encomenda, marque ou desmarque cada item como feito (todas as unidades da linha). O card mostra o progresso, e itens feitos saem do tempo pendente na sugestão de entrega. A marcação não muda o status geral da encomenda. Alterar a quantidade na edição desmarca o item; outras alterações preservam a marcação. Itens antigos de encomendas prontas/entregues começam marcados como feitos.
+
 Para ordenar o catálogo pelos produtos mais encomendados, execute `supabase/migrations/202610280003_catalog_popularity.sql` após as migrações anteriores. O ranking soma quantidades de todas as variações por produto em encomendas não canceladas, incluindo as já entregues. Alterações e cancelamentos ajustam o ranking na próxima consulta. Empates e produtos sem encomendas usam ordem alfabética. O público recebe apenas a posição no ranking, sem dados dos pedidos ou quantidades vendidas.
 
 Para editar encomendas, execute `supabase/migrations/202610280002_edit_order.sql` após as migrações anteriores. O botão “Editar encomenda” abre o formulário com os dados atuais. Itens existentes mantêm nome, tamanho, custo e tempo registrados; itens adicionados recebem os dados atuais do produto. Pagamentos são preservados, e o total não pode ficar abaixo do recebido. Encomendas canceladas precisam ser reabertas antes de editar. Os cards permitem trocar diretamente entre A fazer, Em produção, Pronto e Entregue; entregue e integralmente pago continua indo para o histórico.

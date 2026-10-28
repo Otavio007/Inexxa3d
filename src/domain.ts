@@ -82,6 +82,7 @@ export const stages: Record<Stage, string> = {
   delivered: "Entregue",
 };
 export type OrderItem = {
+  completed?: boolean;
   production_minutes?: number;
   id?: string;
   variant_id: string;

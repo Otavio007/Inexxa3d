@@ -32,6 +32,7 @@ test(
       await db.exec(await readFile(new URL("../supabase/migrations/202610280001_production_time.sql", import.meta.url), "utf8"));
       await db.exec(await readFile(new URL("../supabase/migrations/202610280002_edit_order.sql", import.meta.url), "utf8"));
       await db.exec(await readFile(new URL("../supabase/migrations/202610280003_catalog_popularity.sql", import.meta.url), "utf8"));
+      await db.exec(await readFile(new URL("../supabase/migrations/202610280004_item_completion.sql", import.meta.url), "utf8"));
       const admin = randomUUID(),
         stranger = randomUUID();
       await db.query("insert into auth.users(id) values($1),($2)", [
@@ -252,14 +253,23 @@ test(
       );
       await assert.rejects(db.query("select delete_product($1)", [pid]));
       await assert.rejects(db.query("select edit_order($1::jsonb)", [JSON.stringify(order)]));
+      await assert.rejects(db.query("select set_item_completed($1,true)", [randomUUID()]));
       await db.exec(`select set_config('request.jwt.claim.sub','${admin}',false);`);
       const editId = randomUUID();
       const editDraft = { ...order, id: editId, discount_kind: "amount", discount_value: 0, items: [{ variant_id: imported.variants[0]!.id, quantity: 1, price_cents: 2000, notes: "Original" }] };
       await db.query("select create_order($1::jsonb)", [JSON.stringify(editDraft)]);
       await db.query("select record_payment($1,$2,500,current_date,'Sinal')", [editId, randomUUID()]);
       const beforeItem = (await db.query<{id:string;cost_cents:number;production_minutes:number}>("select * from order_items where order_id=$1", [editId])).rows[0]!;
+      await db.query("select set_item_completed($1,true)", [beforeItem.id]);
+      await db.query("select set_item_completed($1,true)", [beforeItem.id]);
+      assert.equal((await db.query<{completed:boolean}>("select completed from order_items where id=$1", [beforeItem.id])).rows[0]!.completed, true);
       const editPayload = { ...editDraft, customer_name: "Cliente editado", due_date: "2026-11-10", items: [{ ...editDraft.items[0], id: beforeItem.id, quantity: 2, price_cents: 1500, product_name: "Nome adulterado", cost_cents: 0, production_minutes: 0 }] };
       await db.query("select edit_order($1::jsonb)", [JSON.stringify(editPayload)]);
+      assert.equal((await db.query<{completed:boolean}>("select completed from order_items where id=$1", [beforeItem.id])).rows[0]!.completed, false);
+      await db.query("select set_item_completed($1,true)", [beforeItem.id]);
+      await db.query("select edit_order($1::jsonb)", [JSON.stringify(editPayload)]);
+      assert.equal((await db.query<{completed:boolean}>("select completed from order_items where id=$1", [beforeItem.id])).rows[0]!.completed, true);
+      await db.query("select set_item_completed($1,false)", [beforeItem.id]);
       const afterItem = (await db.query<{cost_cents:number;production_minutes:number;product_name:string}>("select * from order_items where order_id=$1", [editId])).rows[0]!;
       assert.equal(afterItem.cost_cents, beforeItem.cost_cents);
       assert.equal(afterItem.production_minutes, beforeItem.production_minutes);

@@ -12,6 +12,7 @@ export function deliverySuggestion(
   let missing = false;
   function duration(rows: OrderItem[]) {
     return rows.reduce((sum, item) => {
+      if (item.completed) return sum;
       if (
         item.production_minutes == null ||
         !Number.isFinite(item.production_minutes) ||

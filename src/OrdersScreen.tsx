@@ -139,6 +139,19 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
       setBusy(false);
     }
   }
+  async function completeItem(item: OrderItem) {
+    if (!item.id || busy) return;
+    setBusy(true);
+    setProblem("");
+    try {
+      await api.setItemCompleted(item.id, !item.completed);
+      await reload();
+    } catch (e) {
+      setProblem(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   function viewOrder(order: Order) {
     setStatusMenuId(null);
     setSelectedId(order.id);
@@ -334,6 +347,10 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                     {displayDate(o.created_at)}
                   </Txt>
                   <Txt bold>{o.customer_name}</Txt>
+                  <Txt small>
+                    {o.items.filter((i) => i.completed).length} de{" "}
+                    {o.items.length} itens feitos
+                  </Txt>
                   <Txt small>
                     {o.items
                       .map((i) => `${i.quantity}× ${i.product_name}`)
@@ -546,9 +563,10 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                 {productionDuration(delivery.availableToday)} disponíveis. O
                 cálculo parte do horário atual e continua às 8h do dia seguinte
                 quando necessário. Pedidos a fazer e em produção entram com o
-                tempo completo; prontos, entregues e cancelados não entram. A
-                estimativa não desconta horas já impressas e não inclui
-                acabamento ou transporte. Você pode escolher outra data.
+                tempo dos itens ainda não feitos; prontos, entregues e
+                cancelados não entram. A estimativa não desconta horas já
+                impressas e não inclui acabamento ou transporte. Você pode
+                escolher outra data.
               </Txt>
               {delivery.date &&
                 validDate(inputDate(draft.due_date)) &&
@@ -732,6 +750,33 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
             </View>
             {selected.items.map((i) => (
               <Card key={i.id}>
+                {selected.canceled_at ? (
+                  <Badge
+                    label={i.completed ? "Feito" : "Não feito"}
+                    tone={i.completed ? "green" : "amber"}
+                  />
+                ) : (
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`Feito: ${i.product_name} — ${i.size}, ${i.quantity} unidade(s)`}
+                    accessibilityState={{
+                      checked: !!i.completed,
+                      disabled: busy,
+                    }}
+                    disabled={busy}
+                    onPress={() => void completeItem(i)}
+                    style={[styles.row, { minHeight: 44 }]}
+                  >
+                    <Ionicons
+                      name={i.completed ? "checkbox" : "square-outline"}
+                      size={24}
+                      color={i.completed ? colors.primary : colors.muted}
+                    />
+                    <Txt bold>
+                      {i.completed ? "Feito" : "Marcar como feito"}
+                    </Txt>
+                  </Pressable>
+                )}
                 <Txt bold>
                   {i.quantity}× {i.product_name} — {i.size}
                 </Txt>
@@ -743,6 +788,11 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                 <Txt small>
                   Custo registrado: {money(i.cost_cents * i.quantity)}
                 </Txt>
+                {i.quantity > 1 && (
+                  <Txt small>
+                    A marcação vale para as {i.quantity} unidades deste item.
+                  </Txt>
+                )}
               </Card>
             ))}
             <Card>

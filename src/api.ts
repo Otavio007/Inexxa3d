@@ -88,6 +88,14 @@ export async function createOrder(order: Record<string, unknown>) {
 export async function editOrder(order: Record<string, unknown>) {
   return check(await supabase.rpc("edit_order", { p_order: order }));
 }
+export async function setItemCompleted(itemId: string, completed: boolean) {
+  return check(
+    await supabase.rpc("set_item_completed", {
+      p_item_id: itemId,
+      p_completed: completed,
+    }),
+  );
+}
 export async function orderAction(id: string, action: string, stage?: string) {
   return check(
     await supabase.rpc("order_action", {
