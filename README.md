@@ -45,6 +45,8 @@ Os arquivos de imagem têm URLs públicas, mesmo quando o produto ainda não foi
 
 ## Como usar
 
+Para editar encomendas, execute `supabase/migrations/202610280002_edit_order.sql` após as migrações anteriores. O botão “Editar encomenda” abre o formulário com os dados atuais. Itens existentes mantêm nome, tamanho, custo e tempo registrados; itens adicionados recebem os dados atuais do produto. Pagamentos são preservados, e o total não pode ficar abaixo do recebido. Encomendas canceladas precisam ser reabertas antes de editar. Os cards permitem trocar diretamente entre A fazer, Em produção, Pronto e Entregue; entregue e integralmente pago continua indo para o histórico.
+
 Para habilitar sugestões de entrega, execute `supabase/migrations/202610280001_production_time.sql` no SQL Editor. O tempo por unidade fica registrado em cada item da encomenda pelo servidor. Encomendas antigas recebem o tempo atualmente cadastrado na variação, pois não havia registro histórico desse tempo. A sugestão considera uma impressora, 13h por dia corrido desde hoje, a fila a fazer/em produção e as quantidades do novo pedido. Não desconta progresso parcial nem considera acabamento ou transporte; use o botão para aplicar a data e ajuste quando necessário. Alterar o tempo de um produto não muda o tempo registrado em encomendas existentes.
 
 - **Produtos:** crie o produto, inclua tamanhos e salve para liberar fotos e arquivos. Para um produto sem variações, use a opção “Padrão”. A primeira foto disponível é a capa. Configure categoria e publique para aparecer no catálogo.

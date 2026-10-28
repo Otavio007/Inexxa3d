@@ -84,6 +84,9 @@ export async function saveSettings(value: Settings) {
 export async function createOrder(order: Record<string, unknown>) {
   return check(await supabase.rpc("create_order", { p_order: order }));
 }
+export async function editOrder(order: Record<string, unknown>) {
+  return check(await supabase.rpc("edit_order", { p_order: order }));
+}
 export async function orderAction(id: string, action: string, stage?: string) {
   return check(
     await supabase.rpc("order_action", {
@@ -130,7 +133,9 @@ export async function upload(
       : !["stl", "3mf", "obj"].includes(ext)
   )
     throw new Error(
-      image ? "Use uma imagem JPG, PNG ou WebP." : "Use um arquivo STL, 3MF ou OBJ.",
+      image
+        ? "Use uma imagem JPG, PNG ou WebP."
+        : "Use um arquivo STL, 3MF ou OBJ.",
     );
   const limit = image ? 10 : 100;
   if (bytes.byteLength > limit * 1024 * 1024)

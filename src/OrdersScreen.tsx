@@ -55,6 +55,8 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
   const { data, loading, error, reload } = useResource(load);
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [cardProblem, setCardProblem] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -67,7 +69,32 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
   const [paymentId, setPaymentId] = useState(api.uuid());
   const [pickerSearch, setPickerSearch] = useState("");
   const selected = data?.orders.find((o) => o.id === selectedId);
-  const delivery = deliverySuggestion(data?.orders ?? [], draft?.items ?? []);
+  const delivery = deliverySuggestion(
+    (data?.orders ?? []).filter((o) => !editing || o.id !== draft?.id),
+    draft?.items ?? [],
+  );
+  function edit(order: Order) {
+    setEditing(true);
+    setSelectedId(null);
+    setProblem("");
+    setDraft({
+      ...order,
+      due_date: order.due_date ? displayDate(order.due_date) : "",
+      items: order.items.map((i) => ({ ...i, key: i.id ?? api.uuid() })),
+    });
+  }
+  async function cardStage(order: Order, stage: Stage) {
+    setBusy(true);
+    setCardProblem("");
+    try {
+      await api.orderAction(order.id, "stage", stage);
+      await reload();
+    } catch (e) {
+      setCardProblem(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   const list = sortOrders(
     (data?.orders ?? []).filter(
       (o) =>
@@ -78,6 +105,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
     ),
   );
   function newOrder() {
+    setEditing(false);
     setProblem("");
     setDraft({
       id: api.uuid(),
@@ -115,7 +143,8 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
       if (date && !validDate(date))
         throw new Error("Informe a entrega no formato DD/MM/AAAA.");
       orderTotal(draft.items, draft.discount_kind, draft.discount_value);
-      await api.createOrder({ ...draft, due_date: date || null });
+      if (editing) await api.editOrder({ ...draft, due_date: date || null });
+      else await api.createOrder({ ...draft, due_date: date || null });
       setDraft(null);
       await reload();
     } catch (e) {
@@ -206,6 +235,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
             <Button label="Tentar novamente" onPress={() => void reload()} />
           </>
         )}
+        {!!cardProblem && <Notice error message={cardProblem} />}
         {loading ? (
           <Loading />
         ) : list.length === 0 ? (
@@ -268,26 +298,51 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                     <Badge label="Pago" tone="green" />
                   )}
                 </View>
-                <Button
-                  label="Ver encomenda"
-                  tone="secondary"
-                  onPress={() => {
-                    setSelectedId(o.id);
-                    setProblem("");
-                    setAmount(o.total_cents - received(o));
-                    setPaymentDate(displayDate(todaySP()));
-                    setPaymentNotes("");
-                    setPaymentId(api.uuid());
-                  }}
-                />
+                <View style={styles.row}>
+                  {!o.canceled_at && (
+                    <Button
+                      label="Editar encomenda"
+                      icon="create-outline"
+                      tone="ghost"
+                      disabled={busy}
+                      onPress={() => edit(o)}
+                    />
+                  )}
+                  <Button
+                    label="Ver encomenda"
+                    tone="secondary"
+                    onPress={() => {
+                      setSelectedId(o.id);
+                      setProblem("");
+                      setAmount(o.total_cents - received(o));
+                      setPaymentDate(displayDate(todaySP()));
+                      setPaymentNotes("");
+                      setPaymentId(api.uuid());
+                    }}
+                  />
+                </View>
               </View>
+              {!o.canceled_at && (
+                <View style={styles.row}>
+                  <Txt small>Status:</Txt>
+                  {(Object.keys(stages) as Stage[]).map((stage) => (
+                    <Button
+                      key={stage}
+                      label={stages[stage]}
+                      tone={o.stage === stage ? "primary" : "ghost"}
+                      disabled={busy || o.stage === stage}
+                      onPress={() => void cardStage(o, stage)}
+                    />
+                  ))}
+                </View>
+              )}
             </Card>
           ))
         )}
       </ScrollView>
       <Dialog
         visible={!!draft}
-        title="Nova encomenda"
+        title={editing ? "Editar encomenda" : "Nova encomenda"}
         onClose={() => {
           if (!busy) setDraft(null);
         }}
@@ -495,7 +550,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
             )}
             {!!problem && <Notice error message={problem} />}
             <Button
-              label="Criar encomenda"
+              label={editing ? "Salvar alterações" : "Criar encomenda"}
               loading={busy}
               disabled={!draft.items.length || !!totalError}
               onPress={() => void create()}
@@ -520,6 +575,15 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               title={selected.customer_name}
               subtitle={`${selected.phone} · Entrega: ${displayDate(selected.due_date)}`}
             />
+            {!selected.canceled_at && (
+              <Button
+                label="Editar encomenda"
+                icon="create-outline"
+                tone="secondary"
+                disabled={busy}
+                onPress={() => edit(selected)}
+              />
+            )}
             <View style={styles.row}>
               {selected.urgent && <Badge label="Urgente" tone="red" />}
               <Badge
