@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import * as api from "./api";
+import { DateField } from "./DateField";
 import {
   Order,
   OrderItem,
@@ -310,11 +311,10 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               value={draft.urgent}
               onChange={(urgent) => update({ urgent })}
             />
-            <Field
+            <DateField
               label="Data de entrega (opcional)"
-              placeholder="DD/MM/AAAA"
               value={draft.due_date}
-              onChangeText={(due_date) => update({ due_date })}
+              onChange={(due_date) => update({ due_date })}
             />
             <Heading
               title="Itens da encomenda"
