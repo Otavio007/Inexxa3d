@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as api from "./api";
 import { DateField } from "./DateField";
@@ -58,6 +58,66 @@ type Draft = {
   discount_value: number;
   items: (OrderItem & { key: string })[];
 };
+const stageAppearance: Record<
+  Stage,
+  {
+    color: string;
+    background: string;
+    border: string;
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+  }
+> = {
+  todo: {
+    color: "#94610B",
+    background: "#FFF8E8",
+    border: "#F0DEB5",
+    icon: "time-outline",
+  },
+  printing: {
+    color: "#2563A6",
+    background: "#EFF6FE",
+    border: "#CEE1F5",
+    icon: "print-outline",
+  },
+  ready: {
+    color: "#23714B",
+    background: "#EDF8F0",
+    border: "#CAE6D4",
+    icon: "checkmark-circle-outline",
+  },
+  delivered: {
+    color: "#586879",
+    background: "#F2F5F8",
+    border: "#DCE3EA",
+    icon: "bag-check-outline",
+  },
+};
+function StageLabel({ stage }: { stage: Stage }) {
+  const appearance = stageAppearance[stage];
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 7,
+        flexShrink: 1,
+        minWidth: 0,
+      }}
+    >
+      <Ionicons name={appearance.icon} size={16} color={appearance.color} />
+      <Text
+        style={{
+          color: appearance.color,
+          fontSize: 12,
+          fontWeight: "600",
+          flexShrink: 1,
+        }}
+      >
+        {stages[stage]}
+      </Text>
+    </View>
+  );
+}
 function ProductionBar({ items }: { items: OrderItem[] }) {
   const { total, done, percent } = productionProgress(items);
   return (
@@ -430,6 +490,10 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                     width: cardsWidth >= 640 ? (cardsWidth - 16) / 2 : "100%",
                     padding: 18,
                     gap: 12,
+                    borderLeftWidth: 3,
+                    borderLeftColor: o.canceled_at
+                      ? colors.red
+                      : stageAppearance[o.stage].border,
                     borderColor: hovered ? colors.primary : colors.border,
                     backgroundColor: pressed ? colors.bg : "white",
                   },
@@ -510,7 +574,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                     style={{
                       gap: 4,
                       alignSelf: "flex-start",
-                      width: 220,
+                      width: 180,
                       maxWidth: "100%",
                       minWidth: 0,
                     }}
@@ -529,24 +593,24 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                       }}
                       style={{
                         minHeight: 44,
-                        paddingHorizontal: 12,
+                        paddingHorizontal: 11,
                         borderWidth: 1,
-                        borderColor: colors.border,
-                        borderRadius: 10,
-                        backgroundColor: colors.soft,
+                        borderColor: stageAppearance[o.stage].border,
+                        borderRadius: 22,
+                        backgroundColor: stageAppearance[o.stage].background,
                         flexDirection: "row",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        gap: 16,
+                        gap: 10,
                       }}
                     >
-                      <Txt small>Status: {stages[o.stage]}</Txt>
+                      <StageLabel stage={o.stage} />
                       <Ionicons
                         name={
                           statusMenuId === o.id ? "chevron-up" : "chevron-down"
                         }
-                        size={16}
-                        color={colors.primary}
+                        size={13}
+                        color={stageAppearance[o.stage].color}
                       />
                     </Pressable>
                     {statusMenuId === o.id && (
@@ -580,16 +644,16 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
                               gap: 12,
                               backgroundColor:
                                 hovered || pressed || o.stage === stage
-                                  ? colors.soft
+                                  ? stageAppearance[stage].background
                                   : "white",
                             })}
                           >
-                            <Txt>{stages[stage]}</Txt>
+                            <StageLabel stage={stage} />
                             {o.stage === stage && (
                               <Ionicons
                                 name="checkmark"
                                 size={17}
-                                color={colors.primary}
+                                color={stageAppearance[stage].color}
                               />
                             )}
                           </Pressable>
