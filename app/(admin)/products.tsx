@@ -105,9 +105,16 @@ export default function Products() {
   const [categoryName, setCategoryName] = useState("");
   const [deleteProduct, setDeleteProduct] = useState<Product[] | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
-  const visibleProducts = (data?.products ?? []).filter((p) =>
-    `${p.name} ${p.description}`.toLowerCase().includes(search.toLowerCase()),
-  );
+  const visibleProducts = (data?.products ?? [])
+    .filter((p) =>
+      `${p.name} ${p.description}`.toLowerCase().includes(search.toLowerCase()),
+    )
+    .sort(
+      (a, b) =>
+        Number(b.published) - Number(a.published) ||
+        a.name.localeCompare(b.name, "pt-BR") ||
+        a.id.localeCompare(b.id),
+    );
   const selectedProducts = (data?.products ?? []).filter((p) =>
     selected.includes(p.id),
   );
