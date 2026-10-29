@@ -748,7 +748,7 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
             </Card>
             <Heading
               title="Itens da encomenda"
-              subtitle="Selecione produtos e personalize os valores, se necessário."
+              subtitle={`${draft.items.reduce((sum, item) => sum + item.quantity, 0)} unidades no total · ${draft.items.length} itens na encomenda`}
             />
             <Field
               label="Buscar produto para adicionar"
@@ -874,6 +874,22 @@ export function OrdersScreen({ history = false }: { history?: boolean }) {
               value={draft.discount_value}
               onChange={(discount_value) => update({ discount_value })}
             />
+            <View
+              style={[
+                styles.row,
+                { backgroundColor: colors.soft, padding: 14, borderRadius: 12 },
+              ]}
+            >
+              <Ionicons
+                name="layers-outline"
+                size={20}
+                color={colors.primary}
+              />
+              <Txt bold>
+                Total de unidades:{" "}
+                {draft.items.reduce((sum, item) => sum + item.quantity, 0)}
+              </Txt>
+            </View>
             {totalError ? (
               <Notice error message={totalError} />
             ) : (
