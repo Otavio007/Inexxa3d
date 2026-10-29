@@ -155,6 +155,18 @@ export default function Catalog() {
             <Brand />
             <View style={styles.row}>
               <Button
+                label="Instagram"
+                icon="logo-instagram"
+                tone="secondary"
+                onPress={() => {
+                  void Linking.openURL(
+                    "https://www.instagram.com/inexxa3d/",
+                  ).catch((error) => {
+                    setLocalError(errorText(error));
+                  });
+                }}
+              />
+              <Button
                 label={`Sacola (${cart.reduce((n, i) => n + i.quantity, 0)})`}
                 icon="bag-handle-outline"
                 onPress={() => {
