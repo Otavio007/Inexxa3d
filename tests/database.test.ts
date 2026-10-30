@@ -34,6 +34,7 @@ test(
       await db.exec(await readFile(new URL("../supabase/migrations/202610280003_catalog_popularity.sql", import.meta.url), "utf8"));
       await db.exec(await readFile(new URL("../supabase/migrations/202610280004_item_completion.sql", import.meta.url), "utf8"));
       await db.exec(await readFile(new URL("../supabase/migrations/202610280005_produced_quantity.sql", import.meta.url), "utf8"));
+      await db.exec(await readFile(new URL("../supabase/migrations/202610300001_ready_completes_items.sql", import.meta.url), "utf8"));
       const admin = randomUUID(),
         stranger = randomUUID();
       await db.query("insert into auth.users(id) values($1),($2)", [
@@ -320,6 +321,16 @@ test(
       assert.equal((await db.query<{stage:string}>("select stage from orders where id=$1", [productionOrderId])).rows[0]!.stage, "ready");
       await db.query("select set_item_produced($1,1)", [productionItem]);
       assert.equal((await db.query<{stage:string}>("select stage from orders where id=$1", [productionOrderId])).rows[0]!.stage, "printing");
+      await db.query("select order_action($1,'stage','ready')", [productionOrderId]);
+      const readyItem = (await db.query<{produced_quantity:number;completed:boolean}>("select produced_quantity,completed from order_items where id=$1", [productionItem])).rows[0]!;
+      assert.equal(readyItem.produced_quantity, 5);
+      assert.equal(readyItem.completed, true);
+      assert.equal((await db.query<{stage:string}>("select stage from orders where id=$1", [productionOrderId])).rows[0]!.stage, "ready");
+      await db.query("select order_action($1,'stage','ready')", [productionOrderId]);
+      await db.query("select set_item_produced($1,2)", [productionItem]);
+      await db.query("select order_action($1,'stage','delivered')", [productionOrderId]);
+      assert.equal((await db.query<{produced_quantity:number}>("select produced_quantity from order_items where id=$1", [productionItem])).rows[0]!.produced_quantity, 5);
+      assert.equal((await db.query<{stage:string}>("select stage from orders where id=$1", [productionOrderId])).rows[0]!.stage, "delivered");
     } finally {
       await db.close();
     }

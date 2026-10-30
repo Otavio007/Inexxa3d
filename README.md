@@ -45,6 +45,8 @@ Os arquivos de imagem têm URLs públicas, mesmo quando o produto ainda não foi
 
 ## Como usar
 
+Execute `supabase/migrations/202610300001_ready_completes_items.sql` para que marcar uma encomenda como Pronto ou Entregue registre todas as unidades dos itens como produzidas, na mesma transação. A migração também corrige os pedidos não cancelados já nessas etapas. Voltar manualmente para A fazer ou Em produção preserva as quantidades registradas; elas podem ser corrigidas nos detalhes.
+
 Para registrar produção por unidade, execute `supabase/migrations/202610280005_produced_quantity.sql` após as anteriores. Em cada item, informe o total de unidades já produzidas e clique em “Salvar produção”. O card e os detalhes mostram a porcentagem por unidades. Ao atingir 100%, o status muda automaticamente para Pronto; produção parcial muda para Em produção. Uma correção abaixo de 100% retorna de Pronto para Em produção. Pedidos entregues mantêm o status Entregue. Alterações de quantidade preservam o produzido até o limite da nova quantidade. Marcações antigas de feito são convertidas para todas as unidades produzidas. O prazo sugerido desconta as unidades já produzidas.
 
 Para marcar itens produzidos, execute `supabase/migrations/202610280004_item_completion.sql` após as anteriores. Nos detalhes da encomenda, marque ou desmarque cada item como feito (todas as unidades da linha). O card mostra o progresso, e itens feitos saem do tempo pendente na sugestão de entrega. Essa marcação inicial é substituída pelo controle de unidades e status automático ao aplicar a migração 202610280005. Itens antigos de encomendas prontas/entregues começam marcados como feitos.
